@@ -161,6 +161,13 @@ func (o *OperatorInstance) init(gadgetCtx operators.GadgetContext) error {
 				logger.Warn("no otel_correlation_id field found")
 				continue
 			}
+			bootTimestampField := in.GetSubFieldsWithTag("name:boot_timestamp")
+			// boot_timestamp is optional: older gadgets compiled before
+			// this field was added won't have it.
+			var hasBootTimestamp bool
+			if len(bootTimestampField) == 1 {
+				hasBootTimestamp = true
+			}
 			pidLevel0Field := in.GetSubFieldsWithTag("name:pid_level0")
 			if len(pidLevel0Field) != 1 {
 				logger.Warn("no pid (level 0) field found")
@@ -407,6 +414,10 @@ func (o *OperatorInstance) init(gadgetCtx operators.GadgetContext) error {
 				}
 
 				if o.symbolizer != nil {
+					var bootTimestamp uint64
+					if hasBootTimestamp {
+						bootTimestamp, _ = bootTimestampField[0].Uint64(data)
+					}
 					task := symbolizer.Task{
 						Name:         fmt.Sprintf("%s/%s", containerName, comm),
 						Tgid:         tgidLevel0,
@@ -419,8 +430,9 @@ func (o *OperatorInstance) init(gadgetCtx operators.GadgetContext) error {
 							MtimeSec:  mtimeSec,
 							MtimeNsec: mtimeNsec,
 						},
-						BaseAddrHash:  baseAddrHash,
-						CorrelationID: otelCorrelationID,
+						BaseAddrHash:       baseAddrHash,
+						CorrelationID:      otelCorrelationID,
+						EventBootTimestamp: bootTimestamp,
 					}
 					stackQueriesResponse, err := o.symbolizer.Resolve(task, stackQueries)
 					if err != nil {
