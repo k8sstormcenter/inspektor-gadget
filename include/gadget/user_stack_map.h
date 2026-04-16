@@ -52,7 +52,7 @@ struct generic_param {
 struct {
 	__uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
 	__uint(max_entries, 1);
-	__type(key, u32);
+	__type(key, int);
 	__type(value, struct generic_param);
 } otel_generic_params SEC(".maps");
 
@@ -266,7 +266,7 @@ gadget_get_user_stack(void *ctx, struct gadget_user_stack *ustack)
 		gadget_fetch_otel_stack_from_kprobe(ctx);
 
 		struct generic_param *ret_param;
-		u32 zero = 0;
+		int zero = 0;
 		ret_param = bpf_map_lookup_elem(&otel_generic_params, &zero);
 		if (!ret_param)
 			return;
